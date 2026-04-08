@@ -1,148 +1,141 @@
-
 import telebot
 from telebot import types
 
-# ============================
-# BOT VA ADMIN CONFIG
-# ============================
-TOKEN = "8533207489:AAFbpwG72z1GQxpBM3uzkOJhXhAxLE87_z8"  # Bot token
-ADMIN_ID = 8248560591  # Admin TG ID
+TOKEN = "TOKENINGNI_QOY"
+ADMIN_ID = 8248560591
+CHANNEL = "@ulashov_uc"
+
+# 💳 KARTA
+CARD = "4073 4200 4928 8487"
+CARD_NAME = "Ulashov Jahongir"
 
 bot = telebot.TeleBot(TOKEN)
 
-# ============================
-# UC NARXLARI
-# ============================
+user_data = {}
+
 prices = {
-    "30": "6.500",
-    "60": "12.500",
-    "120": "25.000",
-    "180": "37.000",
-    "325": "58.000",
-    "385": "72.000",
-    "660": "116.000",
-    "720": "127.000",
-    "985": "173.000",
-    "1320": "230.000",
-    "1800": "283.000",
-    "2125": "355.000",
-    "2460": "405.000",
-    "3850": "570.000",
-    "4510": "680.000",
-    "5650": "850.000",
-    "8100": "1.110.000",
-    "11950": "1.700.000",
-    "24300": "3.500.000"
+    "30": "6 500",
+    "60": "12 500",
+    "120": "25 000",
+    "180": "37 000",
+    "325": "58 000",
+    "385": "72 000",
+    "660": "116 000",
+    "720": "127 000",
+    "985": "173 000",
+    "1320": "230 000",
+    "1800": "283 000",
+    "2125": "355 000",
+    "2460": "405 000",
+    "3850": "570 000",
+    "4510": "680 000",
+    "5650": "850 000",
+    "8100": "1 110 000",
+    "11950": "1 700 000",
+    "24300": "3 500 000"
 }
 
-# ============================
-# BUYURTMALAR TEMP STORAGE
-# ============================
-pending_orders = {}
+# MENU
+def menu():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("💰 UC Narxlari", "🛒 UC Xarid")
+    markup.add("📢 Kanal", "👨‍💼 Admin")
+    return markup
 
-# ============================
-# /start KOMANDASI
-# ============================
+def footer():
+    return "\n\n📢 Kanal: https://t.me/ulashov_uc"
+
+# START
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "Salom! UC sotib olish uchun /buy komandasini yuboring.")
-
-
-# ============================
-# BUY UC
-# ============================
-@bot.message_handler(commands=['buy'])
-def buy_uc(message):
-    user_id = message.from_user.id
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    for uc_amount in prices.keys():
-        markup.add(uc_amount)
-    msg = bot.send_message(user_id, "UC miqdorini tanlang 👇", reply_markup=markup)
-    bot.register_next_step_handler(msg, get_uc_amount)
-
-
-def get_uc_amount(message):
-    user_id = message.from_user.id
-    uc = message.text
-    if uc not in prices:
-        msg = bot.send_message(user_id, "❌ Noto'g'ri miqdor, qayta tanlang:")
-        bot.register_next_step_handler(msg, get_uc_amount)
-        return
-
-    pending_orders[user_id] = {'uc': uc, 'username': message.from_user.username}
-    msg = bot.send_message(user_id, f"UC: {uc}\nNarxi: {prices[uc]} so'm\nPul miqdorini yuboring:")
-    bot.register_next_step_handler(msg, get_paid_amount)
-
-
-def get_paid_amount(message):
-    user_id = message.from_user.id
     try:
-        amount = int(message.text.replace(".", "").replace(",", ""))
-    except ValueError:
-        msg = bot.send_message(user_id, "❌ Pul summasini raqam bilan yuboring:")
-        bot.register_next_step_handler(msg, get_paid_amount)
+        member = bot.get_chat_member(CHANNEL, message.from_user.id)
+        if member.status in ['left', 'kicked']:
+            bot.send_message(message.chat.id, "❌ Avval kanalga obuna bo‘ling!\nhttps://t.me/ulashov_uc")
+            return
+    except:
+        pass
+
+    bot.send_message(message.chat.id, "👋 Xush kelibsiz!", reply_markup=menu())
+
+# NARXLAR
+@bot.message_handler(func=lambda m: m.text == "💰 UC Narxlari")
+def show_prices(message):
+    text = "💰 UC Narxlari:\n\n"
+    for uc, price in prices.items():
+        text += f"{uc} UC — {price} so'm\n"
+
+    bot.send_message(message.chat.id, text + footer())
+
+# UC XARID
+@bot.message_handler(func=lambda m: m.text == "🛒 UC Xarid")
+def buy_uc(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    for uc in prices.keys():
+        markup.add(f"{uc} UC")
+
+    markup.add("🔙 Orqaga")
+
+    msg = bot.send_message(message.chat.id, "UC tanlang 👇", reply_markup=markup)
+    bot.register_next_step_handler(msg, get_uc)
+
+def get_uc(message):
+    if message.text == "🔙 Orqaga":
+        start(message)
         return
 
-    pending_orders[user_id]['paid_amount'] = amount
-    msg = bot.send_message(user_id, "✅ Endi chek rasmini yuboring:")
-    bot.register_next_step_handler(msg, get_check)
+    uc = ''.join(filter(str.isdigit, message.text))
 
+    if uc not in prices:
+        bot.send_message(message.chat.id, "❌ Noto‘g‘ri tanlov")
+        return
 
-# ============================
-# CHECK QABUL QILISH VA TASDIQLASH
-# ============================
+    user_data[message.chat.id] = {"uc": uc}
+
+    # 💳 KARTA + SUMMA CHIQADI
+    bot.send_message(
+        message.chat.id,
+        f"""💳 To‘lov qilish:
+
+💰 UC: {uc}
+💵 Narx: {prices[uc]} so'm
+
+💳 Karta: {CARD}
+👤 Ism: {CARD_NAME}
+
+📸 To‘lovdan so‘ng chek yuboring!"""
+    )
+
+    bot.register_next_step_handler(message, get_check)
+
+# CHEK
 def get_check(message):
-    user_id = message.from_user.id
-    data = pending_orders.get(user_id, {})
-
-    if not message.photo:
-        msg = bot.send_message(user_id, "❌ Iltimos, chek rasmini yuboring.")
-        bot.register_next_step_handler(msg, get_check)
+    if message.content_type != 'photo':
+        bot.send_message(message.chat.id, "❌ Iltimos chek rasmini yuboring")
         return
 
-    check_file_id = message.photo[-1].file_id
-    data['check_file_id'] = check_file_id
-    pending_orders[user_id] = data
+    data = user_data.get(message.chat.id)
 
-    # Avto tasdiqlash
-    if auto_verify_check(data):
-        confirm_order(user_id)
+    username = message.from_user.username
+    if username:
+        username = "@" + username
     else:
-        bot.send_message(user_id, "❌ Chek tasdiqlanmadi, iltimos qayta yuboring.")
-        msg = bot.send_message(user_id, "Check yuboring:")
-        bot.register_next_step_handler(msg, get_check)
+        username = "Username yo‘q"
 
+    bot.send_message(message.chat.id, "✅ Buyurtma qabul qilindi!")
 
-def auto_verify_check(data):
-    """Simple avto tekshiruvchi, hozirgi narx va to‘lovni solishtiradi"""
-    uc = data.get('uc')
-    price = int(prices[uc].replace(".", "").replace(",", ""))
-    paid_amount = data.get('paid_amount', 0)
-    return paid_amount >= price
-
-
-def confirm_order(user_id):
-    data = pending_orders.get(user_id)
-    username = f"@{data.get('username')}" if data.get('username') else "Noma'lum"
-    uc = data['uc']
-    price = prices[uc]
-
-    caption = f"""✅ Yangi buyurtma tasdiqlandi!
+    bot.send_photo(
+        ADMIN_ID,
+        message.photo[-1].file_id,
+        caption=f"""🛒 Yangi buyurtma!
 
 👤 Username: {username}
-🆔 TG ID: {user_id}
-🎮 UC: {uc}
-💵 Narx: {price} so'm
+🆔 TG ID: {message.from_user.id}
+💰 UC: {data['uc']}
+💵 Narx: {prices[data['uc']]} so'm
 """
-    # Adminga yuborish
-    bot.send_photo(ADMIN_ID, data['check_file_id'], caption=caption)
-    # Userga ham yuborish
-    bot.send_message(user_id, "✅ Sizning buyurtmangiz tasdiqlandi! Adminga yuborildi.")
-    # Buyurtmani saqlashdan o'chirish
-    pending_orders.pop(user_id, None)
+    )
 
-
-# ============================
-# BOT POLLING
-# ============================
-bot.polling(non_stop=True)
+# RUN
+bot.infinity_polling()
